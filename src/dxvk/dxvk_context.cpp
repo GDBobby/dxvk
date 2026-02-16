@@ -965,6 +965,12 @@ namespace dxvk {
     const VkDrawIndexedIndirectCommand* draws) {
     drawGeneric<true>(count, draws);
   }
+  void DxvkContext::PushLabels(std::stack<BobbyDebugUtil> debugUtils){
+    m_cmd->cmdBeginLabel(debugUtils);
+  }
+  void DxvkContext::PopLabels(uint8_t count){
+    m_cmd->cmdEndLabel(count);
+  }
 
 
   void DxvkContext::drawIndexedIndirect(

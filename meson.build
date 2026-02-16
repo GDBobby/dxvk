@@ -1,4 +1,4 @@
-project('dxvk', ['c', 'cpp'], version : '2.6.1', meson_version : '>= 0.58', default_options : [ 'cpp_std=c++17', 'b_vscrt=static_from_buildtype', 'warning_level=2' ])
+project('dxvk', ['c', 'cpp'], version : '2.6.1', meson_version : '>= 0.58', default_options : [ 'cpp_std=c++23', 'b_vscrt=static_from_buildtype', 'warning_level=2' ])
 
 pkg = import('pkgconfig')
 cpu_family = target_machine.cpu_family()
@@ -28,7 +28,7 @@ compiler_args = [
   '-Wno-missing-braces',
 ]
 
-link_args = []
+link_args = ['-lstdc++exp']
 
 if get_option('build_id')
   link_args += [

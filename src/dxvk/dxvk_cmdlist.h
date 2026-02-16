@@ -16,6 +16,8 @@
 #include "dxvk_sparse.h"
 #include "dxvk_stats.h"
 
+#include <stack>
+
 namespace dxvk {
   
   /**
@@ -484,6 +486,8 @@ namespace dxvk {
 
     void cmdBeginRendering(
       const VkRenderingInfo*        pRenderingInfo) {
+        m_vkd->InitializeBeginLabelFunction();
+        m_vkd->InitializeEndLabelFunction();
       m_cmd.execCommands = true;
 
       m_vkd->vkCmdBeginRendering(getCmdBuffer(), pRenderingInfo);
@@ -707,12 +711,14 @@ namespace dxvk {
       m_vkd->vkCmdDispatchIndirect(getCmdBuffer(cmdBuffer), buffer, offset);
     }
     
-    
+
     void cmdDraw(
             uint32_t                vertexCount,
             uint32_t                instanceCount,
             uint32_t                firstVertex,
             uint32_t                firstInstance) {
+      //auto curr = std::stacktrace::current();
+      //printf("calling vkCmdDraw\n");
       m_vkd->vkCmdDraw(getCmdBuffer(),
         vertexCount, instanceCount,
         firstVertex, firstInstance);
@@ -750,6 +756,12 @@ namespace dxvk {
         offset, countBuffer, countOffset, maxDrawCount, stride);
     }
     
+    void cmdBeginLabel(std::stack<BobbyDebugUtil> debugUtils);
+    void cmdEndLabel(uint8_t count){
+      for(uint8_t i = 0; i < count; i++){
+        m_vkd->EndLabel(getCmdBuffer());
+      }
+    }
     
     void cmdDrawIndexed(
             uint32_t                indexCount,
@@ -757,10 +769,15 @@ namespace dxvk {
             uint32_t                firstIndex,
             int32_t                 vertexOffset,
             uint32_t                firstInstance) {
+      //m_vkd->BeginLabel(getCmdBuffer());
+
       m_vkd->vkCmdDrawIndexed(getCmdBuffer(),
         indexCount, instanceCount,
         firstIndex, vertexOffset,
         firstInstance);
+
+        
+      //m_vkd->EndLabel(getCmdBuffer());
     }
     
     

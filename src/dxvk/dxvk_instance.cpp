@@ -228,7 +228,7 @@ namespace dxvk {
       &ext.khrSurface,
     }};
 
-    if (withDebug)
+    //if (withDebug)
       result.push_back(&ext.extDebugUtils);
 
     return result;

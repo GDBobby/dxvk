@@ -335,6 +335,7 @@ namespace dxvk {
     DxvkExt nvRawAccessChains                 = { VK_NV_RAW_ACCESS_CHAINS_EXTENSION_NAME,                   DxvkExtMode::Optional };
     DxvkExt nvxBinaryImport                   = { VK_NVX_BINARY_IMPORT_EXTENSION_NAME,                      DxvkExtMode::Disabled };
     DxvkExt nvxImageViewHandle                = { VK_NVX_IMAGE_VIEW_HANDLE_EXTENSION_NAME,                  DxvkExtMode::Disabled };
+    //DxvkExt extDebugUtils                     = { VK_EXT_DEBUG_UTILS_EXTENSION_NAME,                        DxvkExtMode::Optional };
   };
   
   /**

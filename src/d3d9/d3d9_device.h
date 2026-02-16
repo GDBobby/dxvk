@@ -42,6 +42,8 @@
 
 namespace dxvk {
 
+  
+
   class D3D9InterfaceEx;
   class D3D9SwapChainEx;
   class D3D9CommonTexture;

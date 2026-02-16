@@ -35,7 +35,7 @@ if get_option('enable_d3d8')
   if not get_option('enable_d3d9')
     error('D3D9 is required for D3D8.')
   endif
-  subdir('d3d8')
+  # subdir('d3d8')
 endif
 
 # Nothing selected

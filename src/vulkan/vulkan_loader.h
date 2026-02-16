@@ -12,6 +12,11 @@
 using PFN_wine_vkAcquireKeyedMutex = VkResult (VKAPI_PTR *)(VkDevice device, VkDeviceMemory memory, uint64_t key, uint32_t timeout_ms);
 using PFN_wine_vkReleaseKeyedMutex = VkResult (VKAPI_PTR *)(VkDevice device, VkDeviceMemory memory, uint64_t key);
 
+struct BobbyDebugUtil{
+  std::string name;
+  float color[4];
+};
+
 namespace dxvk::vk {
 
   /**
@@ -63,6 +68,11 @@ namespace dxvk::vk {
     DeviceLoader(const Rc<InstanceLoader>& library, bool owned, VkDevice device);
     PFN_vkVoidFunction sym(const char* name) const;
     VkDevice device() const { return m_device; }
+    void BeginLabel(VkCommandBuffer cmdBuf, BobbyDebugUtil utilLabel) const;
+    void BeginLabel(VkCommandBuffer cmdBuf, const char* name, float red, float green, float blue, float alpha) const;
+    void EndLabel(VkCommandBuffer cmdBuf) const;
+    void InitializeBeginLabelFunction() const;
+    void InitializeEndLabelFunction() const;
   protected:
     Rc<InstanceLoader>            m_library;
     const PFN_vkGetDeviceProcAddr m_getDeviceProcAddr;
@@ -170,6 +180,10 @@ namespace dxvk::vk {
     #endif
   };
   
+  struct DEBUG_STRUCT{
+    std::string printline;
+    DEBUG_STRUCT(std::string const& printline);
+  };
   
   /**
    * \brief Vulkan device functions
@@ -235,7 +249,13 @@ namespace dxvk::vk {
     VULKAN_FN(vkDestroyPipelineCache);
     VULKAN_FN(vkGetPipelineCacheData);
     VULKAN_FN(vkMergePipelineCaches);
-    VULKAN_FN(vkCreateGraphicsPipelines);
+    DEBUG_STRUCT prestruct{"before pfn\n"};
+    static VkResult intermediate_vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount, const VkGraphicsPipelineCreateInfo* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines);
+    
+    PFN_vkCreateGraphicsPipelines real_vkCreateGraphicsPipelines = reinterpret_cast<PFN_vkCreateGraphicsPipelines>(sym("vkCreateGraphicsPipelines"));
+    PFN_vkCreateGraphicsPipelines vkCreateGraphicsPipelines = intermediate_vkCreateGraphicsPipelines;
+    //VULKAN_FN(vkCreateGraphicsPipelines);
+    DEBUG_STRUCT poststruct{"after pfn\n"};
     VULKAN_FN(vkCreateComputePipelines);
     VULKAN_FN(vkDestroyPipeline);
     VULKAN_FN(vkCreatePipelineLayout);

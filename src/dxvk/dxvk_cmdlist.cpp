@@ -1,8 +1,25 @@
 #include "dxvk_cmdlist.h"
 #include "dxvk_device.h"
 
-namespace dxvk {
 
+VkCommandBuffer globalCommandBuffer;
+
+extern "C" __declspec(dllexport)
+VkCommandBuffer dxvk_get_cmd_buffer(){
+  return globalCommandBuffer;
+}
+
+namespace dxvk {
+  void DxvkCommandList::cmdBeginLabel(std::stack<BobbyDebugUtil> debugUtils){
+    std::vector<BobbyDebugUtil> debugUtilReorder{};
+    while(debugUtils.size() > 0){
+      debugUtilReorder.push_back(std::move(debugUtils.top()));
+      debugUtils.pop();
+    }
+    for(auto riter = debugUtilReorder.rbegin(); riter != debugUtilReorder.rend(); riter++){
+      m_vkd->BeginLabel(getCmdBuffer(), *riter);
+    }
+  }
   DxvkCommandSubmission::DxvkCommandSubmission() {
 
   }
@@ -167,6 +184,7 @@ namespace dxvk {
       if (label.pLabelName)
         vki->vkCmdBeginDebugUtilsLabelEXT(commandBuffer, &label);
     }
+    globalCommandBuffer = commandBuffer;
 
     return commandBuffer;
   }

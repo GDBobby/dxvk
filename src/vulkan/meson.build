@@ -1,4 +1,5 @@
 vkcommon_src = files([
+  'Pipe_Compressed.cpp',
   'vulkan_loader.cpp',
   'vulkan_names.cpp',
 ])

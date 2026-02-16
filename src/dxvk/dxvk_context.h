@@ -10,6 +10,8 @@
 #include "dxvk_queue.h"
 #include "dxvk_util.h"
 
+#include <stack>
+
 namespace dxvk {
 
   /**
@@ -799,6 +801,9 @@ namespace dxvk {
             uint32_t          count,
             uint32_t          stride,
             bool              unroll);
+    
+    void PushLabels(std::stack<BobbyDebugUtil> debugUtils);
+    void PopLabels(uint8_t count);
 
     /**
      * \brief Indirect indexed draw call

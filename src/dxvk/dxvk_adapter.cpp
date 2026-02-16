@@ -1086,6 +1086,7 @@ namespace dxvk {
       &devExtensions.nvRawAccessChains,
       &devExtensions.nvxBinaryImport,
       &devExtensions.nvxImageViewHandle,
+      //&devExtensions.extDebugUtils,
     }};
   }
 

@@ -27,11 +27,42 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <stack>
 #ifdef MSC_VER
 #pragma fenv_access (on)
 #endif
 
+VkDevice globalVkDeviceBobby = VK_NULL_HANDLE;
+std::stack<BobbyDebugUtil> debugUtilStack{};
+
+extern "C" __declspec(dllexport)
+void dxvk_begin_label(const char* name, float red, float green, float blue, float alpha) {
+  BobbyDebugUtil util;
+  util.name = name;
+  
+  util.color[0] = red;
+  util.color[1] = green;
+  util.color[2] = blue;
+  util.color[3] = alpha;
+
+  debugUtilStack.push(util);
+
+}
+
+extern "C" __declspec(dllexport)
+void dxvk_end_label() {
+  debugUtilStack.pop();
+}
+
+
+
+extern "C" __declspec(dllexport)
+VkDevice dxvk_get_vk_device() {
+  return globalVkDeviceBobby;
+}
+
 namespace dxvk {
+
 
   D3D9DeviceEx::D3D9DeviceEx(
           D3D9InterfaceEx*       pParent,
@@ -198,7 +229,14 @@ namespace dxvk {
     D3DADAPTER_IDENTIFIER9 adapterId9;
     HRESULT res = m_adapter->GetAdapterIdentifier(0, &adapterId9);
     m_vendorId = SUCCEEDED(res) ? adapterId9.VendorId : 0;
+
+    FILE* f;
+    freopen_s(&f, "CONOUT$", "w", stdout);
+    freopen_s(&f, "CONOUT$", "w", stderr);
+    globalVkDeviceBobby = m_dxvkDevice->handle();
+    printf("setting global vk device - %zu\n", globalVkDeviceBobby);
   }
+
 
 
   D3D9DeviceEx::~D3D9DeviceEx() {
@@ -2892,7 +2930,9 @@ namespace dxvk {
     EmitCs([this,
       cPrimType    = PrimitiveType,
       cPrimCount   = PrimitiveCount,
-      cStartVertex = StartVertex
+      cStartVertex = StartVertex,
+
+      debugNamingUtils = debugUtilStack
     ](DxvkContext* ctx) {
       uint32_t vertexCount = GetVertexCount(cPrimType, cPrimCount);
 
@@ -2905,7 +2945,9 @@ namespace dxvk {
       draw.instanceCount = 1u;
       draw.firstVertex   = cStartVertex;
 
+      ctx->PushLabels(debugUtilStack);
       ctx->draw(1u, &draw);
+      ctx->PopLabels(debugUtilStack.size());
     });
 
     return D3D_OK;
@@ -2946,7 +2988,9 @@ namespace dxvk {
       cPrimCount       = PrimitiveCount,
       cStartIndex      = StartIndex,
       cBaseVertexIndex = BaseVertexIndex,
-      cInstanceCount   = GetInstanceCount()
+      cInstanceCount   = GetInstanceCount(),
+
+      debugNamingUtils = debugUtilStack
     ](DxvkContext* ctx) {
       auto drawInfo = GenerateDrawInfo(cPrimType, cPrimCount, cInstanceCount);
 
@@ -2958,7 +3002,9 @@ namespace dxvk {
       draw.firstIndex    = cStartIndex;
       draw.vertexOffset  = cBaseVertexIndex;
 
+      ctx->PushLabels(debugNamingUtils);
       ctx->drawIndexed(1u, &draw);
+      ctx->PopLabels(debugNamingUtils.size());
     });
 
     return D3D_OK;
@@ -2992,7 +3038,9 @@ namespace dxvk {
       cBufferSlice  = std::move(upSlice.slice),
       cPrimType     = PrimitiveType,
       cStride       = VertexStreamZeroStride,
-      cVertexCount  = vertexCount
+      cVertexCount  = vertexCount,
+
+      debugNamingUtils = debugUtilStack
     ](DxvkContext* ctx) mutable {
       ApplyPrimitiveType(ctx, cPrimType);
 
@@ -3001,9 +3049,11 @@ namespace dxvk {
       draw.vertexCount = cVertexCount;
       draw.instanceCount = 1u;
 
+      ctx->PushLabels(debugNamingUtils);
       ctx->bindVertexBuffer(0, std::move(cBufferSlice), cStride);
       ctx->draw(1u, &draw);
       ctx->bindVertexBuffer(0, DxvkBufferSlice(), 0);
+      ctx->PopLabels(debugNamingUtils.size());
     });
 
     m_state.vertexBuffers[0].vertexBuffer = nullptr;
@@ -3056,7 +3106,9 @@ namespace dxvk {
       cStride       = VertexStreamZeroStride,
       cInstanceCount = GetInstanceCount(),
       cIndexType    = DecodeIndexType(
-                        static_cast<D3D9Format>(IndexDataFormat))
+                        static_cast<D3D9Format>(IndexDataFormat)),
+
+                        debugNamingUtils = debugUtilStack
     ](DxvkContext* ctx) {
       auto drawInfo = GenerateDrawInfo(cPrimType, cPrimCount, cInstanceCount);
 
@@ -3066,11 +3118,13 @@ namespace dxvk {
       draw.indexCount    = drawInfo.vertexCount;
       draw.instanceCount = drawInfo.instanceCount;
 
+      ctx->PushLabels(debugNamingUtils);
       ctx->bindVertexBuffer(0, cBufferSlice.subSlice(0, cVertexSize), cStride);
       ctx->bindIndexBuffer(cBufferSlice.subSlice(cVertexSize, cBufferSlice.length() - cVertexSize), cIndexType);
       ctx->drawIndexed(1u, &draw);
       ctx->bindVertexBuffer(0, DxvkBufferSlice(), 0);
       ctx->bindIndexBuffer(DxvkBufferSlice(), VK_INDEX_TYPE_UINT32);
+      ctx->PopLabels(debugNamingUtils.size());
     });
 
     m_state.vertexBuffers[0].vertexBuffer = nullptr;
@@ -3160,7 +3214,9 @@ namespace dxvk {
       cStartIndex     = SrcStartIndex,
       cInstanceCount  = GetInstanceCount(),
       cBufferSlice    = dst->GetBufferSlice<D3D9_COMMON_BUFFER_TYPE_REAL>(),
-      cBufferOffset   = offset
+      cBufferOffset   = offset,
+
+      debugNamingUtils = debugUtilStack
     ](DxvkContext* ctx) mutable {
       Rc<DxvkShader> shader = m_swvpEmulator.GetShaderModule(this, std::move(cVertexElements));
 
@@ -3195,12 +3251,14 @@ namespace dxvk {
 
       uint32_t byteOffset = cBufferOffset;
 
+      ctx->PushLabels(debugNamingUtils);
       ctx->bindShader<VK_SHADER_STAGE_GEOMETRY_BIT>(std::move(shader));
       ctx->bindResourceBufferView(VK_SHADER_STAGE_GEOMETRY_BIT, getSWVPBufferSlot(), std::move(bufferView));
       ctx->pushConstants(sizeof(D3D9RenderStateInfo), sizeof(byteOffset), &byteOffset);
       ctx->draw(1u, &draw);
       ctx->bindResourceBufferView(VK_SHADER_STAGE_GEOMETRY_BIT, getSWVPBufferSlot(), nullptr);
       ctx->bindShader<VK_SHADER_STAGE_GEOMETRY_BIT>(nullptr);
+      ctx->PopLabels(debugNamingUtils.size());
     });
 
     // We unbound the pixel shader before,
